@@ -1,0 +1,94 @@
+=head1 NAME
+
+remotesieve
+
+=head1 SYNOPSIS
+
+Connects to an IMAP mailserver and sorts messages into folders based on regexes run against their headers. 
+Perfoms the basic functions of sieve without the hassle of actually setting sieve up.
+
+=head1 DESCRIPTION
+
+The config file is sort-of Apache style, which is dangerously close to XML. It's also what Config::General likes, though. It is case-sensitive.
+
+There are currently three supported (and, incidentally, required) sections:
+
+=over 1
+
+=item credentials
+
+C<credentials> is the configuration for the IMAP connection itself. Each key is required except the C<port>. C<folder> is the IMAP folder in which
+we're to do the processing.
+
+ <credentials>
+        host = mail.example.org
+        port = 993
+        user = username
+        pass = password
+        folder = INBOX
+ </credentials>
+
+=item C<subject> and C<from>
+
+These two sections define how we spot mail, and what we do with it. 
+Patterns in the C<subject> section are matched against the Subject header and those in the C<from> section are matched against the From. 
+
+The key/value pairs are:
+
+  folder = pattern
+
+if C<pattern> matches the header, the mail gets put in C<folder>. Handy examples:
+
+=back
+
+=head1 EXAMPLE CONFIG
+
+ # connect to mail.example.org:993
+ <credentials>
+        host = mail.example.org
+        port = 993
+        user = username
+        pass = password
+        folder = INBOX
+ </credentials>
+
+ # Move mail with subject line starting '[gllug]' into the 'gllug' subfolder of the inbox, and
+ # mail with a subject line containing 'Denyhosts Report' into the 'Denyhosts' subfolder
+ <subject>
+        INBOX.gllug = ^[gllug]
+        INBOX.Denyhosts = DenyHosts Report
+ </subject>
+ 
+ # Move stuff from root at any machine into the 'crap' subfolder of the inbox:
+ <from>
+         INBOX.crap = ^root\@
+ </from>
+
+
+=head1 REQUIRES
+
+=over 4
+
+=item Perl 5.10
+
+=item Mail::IMAPClient
+
+=item Config::General
+
+In Debian, you want
+
+=item libmail-imapclient-perl
+
+=item libconfig-general-perl
+
+=back
+
+=head1 KNOWN BUGS
+
+=over 4
+
+=item No error detection at all
+
+=item C<credentials>, C<subject> and C<from> sections are all mandated, even if empty
+
+=back
