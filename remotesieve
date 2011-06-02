@@ -1,0 +1,98 @@
+#! /usr/bin/perl
+
+use strict;
+use Mail::IMAPClient;
+use Config::General;
+use Data::Dumper;
+use 5.010;
+
+my $configFile = $ENV{HOME}."/.remotesieve.conf";
+
+unless(-f $configFile){
+	say "No config file at $configFile";
+	exit 1;
+}
+
+my $conf = new Config::General(
+	-ConfigFile => $configFile,
+);
+
+my %config = $conf->getall;
+
+my $user = $config{credentials}{user};
+my $pass = $config{credentials}{pass};
+my $host = $config{credentials}{host};
+my $port = $config{credentials}{port};
+
+unless ($port eq ''){
+	$host.=":$port";
+}
+
+my $folder = $config{credentials}{folder};
+
+my $ref = $config{subject};
+my %subject = %$ref;
+
+$ref = $config{from};
+my %from = %$ref;
+
+my $imap = Mail::IMAPClient->new(
+    Server   => $host,
+    User     => $user,
+    Password => $pass,
+    Ssl      => 1,
+    Uid		=> 1
+) or die "Error: $@\n";
+
+$imap->select($folder);
+my @unread = $imap->unseen;
+
+foreach(@unread){
+	my $matched = 0;
+	my $uid = $_;
+	my $ref = $imap->parse_headers($_, "Subject", "To", "From");
+	my %headers = %$ref;
+	my $subject = $headers{Subject}[0];
+	my $to = $headers{To}[0];
+	my $from = $headers{From}[0];
+
+	foreach(keys(%subject)){
+		my $newFolder = $_;
+		my $pattern = $subject{$_};
+		if ($subject =~ /$pattern/){
+			my $uid = $imap->move($newFolder, $uid);
+			$imap->expunge;
+			$matched = 1;
+			last;
+		
+		}
+	}
+	unless($matched = 1){
+		foreach(keys(%from)){
+			my $newFolder = $_;
+			my $pattern = $from{$_};
+			if ($from =~ /$pattern/){
+				my $uid = $imap->move($newFolder, $uid);
+				$imap->expunge;
+				$matched = 1;
+				last;
+			}
+		
+		}
+	}
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
